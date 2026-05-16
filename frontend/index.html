@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>任务管理系统</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 任务管理系统</h1>
+            <button class="btn btn-primary" onclick="openAddTaskModal()">+ 新建任务</button>
+        </header>
+
+        <div class="main-content">
+            <!-- 团队成员列表 -->
+            <aside class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-header">
+                        <h3>团队成员</h3>
+                        <button class="btn btn-sm" onclick="openAddUserModal()">+</button>
+                    </div>
+                    <div id="userList" class="user-list">
+                        <p class="text-muted">加载中...</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <h3>统计信息</h3>
+                    <div id="stats" class="stats">
+                        <p class="text-muted">加载中...</p>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 任务列表 -->
+            <main class="tasks-section">
+                <div class="toolbar">
+                    <div class="filter-group">
+                        <select id="filterStatus" onchange="renderTasks()">
+                            <option value="">所有状态</option>
+                            <option value="todo">待办</option>
+                            <option value="in_progress">进行中</option>
+                            <option value="done">已完成</option>
+                        </select>
+
+                        <select id="filterPriority" onchange="renderTasks()">
+                            <option value="">所有优先级</option>
+                            <option value="low">低</option>
+                            <option value="medium">中</option>
+                            <option value="high">高</option>
+                        </select>
+
+                        <select id="filterAssignee" onchange="renderTasks()">
+                            <option value="">所有成员</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-sm" onclick="renderTasks()">刷新</button>
+                </div>
+
+                <div id="tasksContainer" class="tasks-container">
+                    <p class="text-muted">加载中...</p>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 添加/编辑任务模态框 -->
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="taskModalTitle">新建任务</h2>
+                <button class="btn-close" onclick="closeModal('taskModal')">×</button>
+            </div>
+            <form id="taskForm" class="modal-body">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <label>任务标题 *</label>
+                    <input type="text" id="taskTitle" required>
+                </div>
+                <div class="form-group">
+                    <label>任务描述</label>
+                    <textarea id="taskDescription" rows="3"></textarea>
+                </div>
+                <div class="form-group-row">
+                    <div class="form-group">
+                        <label>状态</label>
+                        <select id="taskStatus">
+                            <option value="todo">待办</option>
+                            <option value="in_progress">进行中</option>
+                            <option value="done">已完成</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>优先级</label>
+                        <select id="taskPriority">
+                            <option value="low">低</option>
+                            <option value="medium" selected>中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>截止日期</label>
+                    <input type="date" id="taskDeadline">
+                </div>
+                <div class="form-group">
+                    <label>分配给</label>
+                    <select id="taskAssignee">
+                        <option value="">未分配</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>标签（用逗号分隔）</label>
+                    <input type="text" id="taskTags" placeholder="例如: 工作, 紧急">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal('taskModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 添加用户模态框 -->
+    <div id="userModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>添加成员</h2>
+                <button class="btn-close" onclick="closeModal('userModal')">×</button>
+            </div>
+            <form id="userForm" class="modal-body">
+                <div class="form-group">
+                    <label>姓名 *</label>
+                    <input type="text" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label>邮箱 *</label>
+                    <input type="email" id="userEmail" required>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal('userModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

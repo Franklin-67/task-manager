@@ -1,0 +1,17 @@
+{
+  "name": "task-manager",
+  "version": "1.0.0",
+  "description": "任务管理系统",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node backend/server.js"
+  },
+  "keywords": ["task-manager", "express"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2"
+  }
+}

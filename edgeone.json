@@ -1,0 +1,9 @@
+{
+  "cloudFunctions": {
+    "nodejs": {
+      "externalNodeModules": ["bcrypt"],
+      "includeFiles": ["data/**/*.json"],
+      "maxDuration": 60
+    }
+  }
+}

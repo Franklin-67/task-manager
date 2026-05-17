@@ -9,13 +9,20 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// Serve frontend static files from project root
+const rootDir = path.join(__dirname, '..');
+app.get('/', (req, res) => {
+    res.sendFile(path.join(rootDir, 'index.html'));
+});
+app.get('/script.js', (req, res) => {
+    res.sendFile(path.join(rootDir, 'script.js'));
+});
+app.get('/style.css', (req, res) => {
+    res.sendFile(path.join(rootDir, 'style.css'));
+});
 
 app.use('/api', apiRouter);
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
-});
 
 app.use((err, req, res, next) => {
     console.error(err.stack);

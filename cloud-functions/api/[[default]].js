@@ -10,11 +10,16 @@ const apiRouter = require('../../backend/api');
 const app = express();
 
 app.use(express.json());
+
+// Mount at both paths to handle EdgeOne routing variations
 app.use('/', apiRouter);
+app.use('/api', apiRouter);
 
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    console.error('Server error:', err.stack);
+    if (!res.headersSent) {
+        res.status(500).json({ error: 'Internal server error' });
+    }
 });
 
 module.exports = app;

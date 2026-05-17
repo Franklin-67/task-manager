@@ -67,6 +67,21 @@ header h1 {
     overflow-y: auto;
 }
 
+.group-section-title {
+    padding: 8px 4px 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #667eea;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.group-section-title:not(:first-child) {
+    margin-top: 12px;
+    border-top: 1px solid #eee;
+    padding-top: 14px;
+}
+
 .user-item {
     display: flex;
     align-items: center;
@@ -366,6 +381,232 @@ header h1 {
     padding: 20px;
 }
 
+/* 登录页面 */
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-container {
+    background: white;
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.login-page h1 {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 10px;
+    color: #212529;
+}
+
+.login-subtitle {
+    text-align: center;
+    color: #6c757d;
+    margin-bottom: 30px;
+}
+
+.info-box {
+    background: #e3f2fd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-left: 4px solid #2196f3;
+}
+
+.info-box h3 {
+    font-size: 1rem;
+    margin-bottom: 10px;
+    color: #1976d2;
+}
+
+.info-box p {
+    font-size: 0.9rem;
+    margin: 5px 0;
+}
+
+.info-box strong {
+    color: #0d47a1;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.toggle-auth {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.toggle-auth a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.toggle-auth a:hover {
+    text-decoration: underline;
+}
+
+/* 用户角色显示 */
+.user-role-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.user-role {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.user-role-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.user-role-badge.superadmin {
+    background: #6610f2;
+    color: white;
+}
+
+.user-role-badge.admin {
+    background: #198754;
+    color: white;
+}
+
+.user-role-badge.member {
+    background: #6c757d;
+    color: white;
+}
+
+/* 邀请码列表 */
+.invite-list {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.invite-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.invite-code {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    background: white;
+    padding: 5px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+}
+
+.invite-info {
+    flex: 1;
+    margin-left: 15px;
+}
+
+.invite-role,
+.invite-uses,
+.invite-expire {
+    display: block;
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin: 3px 0;
+}
+
+.invite-role {
+    color: #212529;
+    font-weight: 600;
+}
+
+/* 小组列表 */
+.groups-list {
+    margin-top: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.group-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+}
+
+.group-item-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 12px;
+}
+
+.group-item-info {
+    flex: 1;
+}
+
+.group-item-name {
+    font-weight: 600;
+    color: #212529;
+    font-size: 1rem;
+}
+
+.group-item-desc {
+    font-size: 0.85rem;
+    color: #6c757d;
+    margin: 3px 0;
+}
+
+.group-item-role {
+    font-size: 0.85rem;
+    color: #198754;
+    font-weight: 600;
+}
+
+/* 任务分组显示 */
+.task-group {
+    margin-bottom: 10px;
+}
+
+.task-group-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #495057;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -455,6 +696,25 @@ header h1 {
 
 .form-group-row .form-group {
     margin-bottom: 0;
+}
+
+.form-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    margin-bottom: 15px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #667eea;
+    color: white;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 
 @media (max-width: 768px) {

@@ -7,18 +7,67 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
+    <!-- 登录页面 -->
+    <div id="loginPage" class="login-page">
+        <div class="login-container">
+            <h1>📋 任务管理系统</h1>
+            <p class="login-subtitle">安全高效的团队协作平台</p>
+
+            <!-- 登录表单 -->
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label>邮箱 *</label>
+                    <input type="email" id="loginEmail" required placeholder="请输入邮箱">
+                </div>
+                <div class="form-group">
+                    <label>密码 *</label>
+                    <input type="password" id="loginPassword" required placeholder="请输入密码">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">登录</button>
+            </form>
+
+            <!-- 注册表单 -->
+            <form id="registerForm" class="login-form" style="display: none;">
+                <div class="form-group">
+                    <label>邀请码 *</label>
+                    <input type="text" id="registerInviteCode" required placeholder="请输入邀请码">
+                </div>
+                <div class="form-group">
+                    <label>邮箱 *</label>
+                    <input type="email" id="registerEmail" required placeholder="请输入邮箱">
+                </div>
+                <div class="form-group">
+                    <label>密码 *</label>
+                    <input type="password" id="registerPassword" required placeholder="请输入密码">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">注册</button>
+            </form>
+
+            <p class="toggle-auth">
+                没有账号？<a href="#" onclick="showRegister()">立即注册</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- 主应用页面 -->
+    <div id="appPage" class="app-page" style="display: none;">
         <header>
             <h1>📋 任务管理系统</h1>
-            <button class="btn btn-primary" onclick="openAddTaskModal()">+ 新建任务</button>
+            <div class="header-info" id="currentUserEmail"></div>
+            <div class="header-actions">
+                <button class="btn btn-sm btn-secondary" onclick="showAllGroupsManager()" id="allGroupsBtn" style="display:none;">所有小组</button>
+                <button class="btn btn-sm btn-secondary" onclick="showInviteManager()" id="inviteManagerBtn">邀请码管理</button>
+                <button class="btn btn-sm btn-secondary" onclick="showMyGroups()" id="myGroupsBtn">我的小组</button>
+                <button class="btn btn-sm btn-secondary" onclick="logout()">退出登录</button>
+            </div>
         </header>
 
         <div class="main-content">
-            <!-- 团队成员列表 -->
+            <!-- 侧边栏 -->
             <aside class="sidebar">
                 <div class="sidebar-section">
                     <div class="sidebar-header">
-                        <h3>团队成员</h3>
+                        <h3>👥 团队成员</h3>
                         <button class="btn btn-sm" onclick="openAddUserModal()">+</button>
                     </div>
                     <div id="userList" class="user-list">
@@ -27,8 +76,19 @@
                 </div>
 
                 <div class="sidebar-section">
-                    <h3>统计信息</h3>
+                    <div class="sidebar-header">
+                        <h3>📊 统计信息</h3>
+                    </div>
                     <div id="stats" class="stats">
+                        <p class="text-muted">加载中...</p>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-header">
+                        <h3>🏆 我的角色</h3>
+                    </div>
+                    <div id="userRole" class="user-role">
                         <p class="text-muted">加载中...</p>
                     </div>
                 </div>
@@ -55,8 +115,13 @@
                         <select id="filterAssignee" onchange="renderTasks()">
                             <option value="">所有成员</option>
                         </select>
+
+                        <select id="filterGroup" onchange="renderTasks()">
+                            <option value="">所有小组</option>
+                        </select>
                     </div>
 
+                    <button class="btn btn-sm btn-primary" onclick="openAddTaskModal()">+ 新建任务</button>
                     <button class="btn btn-sm" onclick="renderTasks()">刷新</button>
                 </div>
 
@@ -113,6 +178,12 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>分组</label>
+                    <select id="taskGroup">
+                        <option value="">未分组</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label>标签（用逗号分隔）</label>
                     <input type="text" id="taskTags" placeholder="例如: 工作, 紧急">
                 </div>
@@ -140,11 +211,178 @@
                     <label>邮箱 *</label>
                     <input type="email" id="userEmail" required>
                 </div>
+                <div class="form-group">
+                    <label>密码 *</label>
+                    <input type="password" id="userPassword" required>
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select id="userRole">
+                        <option value="member">普通成员</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                </div>
                 <div class="modal-footer">
                     <button type="button" class="btn" onclick="closeModal('userModal')">取消</button>
                     <button type="submit" class="btn btn-primary">添加</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- 邀请码管理模态框 -->
+    <div id="inviteManagerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>邀请码管理</h2>
+                <button class="btn-close" onclick="closeModal('inviteManagerModal')">×</button>
+            </div>
+            <form id="inviteForm" class="modal-body">
+                <div class="form-group">
+                    <label>角色类型</label>
+                    <select id="inviteRole">
+                        <option value="member">普通成员</option>
+                        <option value="admin">管理员</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>最大使用次数</label>
+                    <input type="number" id="inviteMaxUses" min="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label>有效期（天）</label>
+                    <input type="number" id="inviteExpires" min="1" value="30">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal('inviteManagerModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">生成邀请码</button>
+                </div>
+            </form>
+            <div id="inviteList" class="invite-list">
+                <p class="text-muted">加载中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 我的小组模态框 -->
+    <div id="myGroupsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>我的小组</h2>
+                <button class="btn-close" onclick="closeModal('myGroupsModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <button class="btn btn-primary btn-sm" onclick="openCreateGroupModal()">+ 创建小组</button>
+            </div>
+            <div id="myGroupsList" class="groups-list">
+                <p class="text-muted">加载中...</p>
+            </div>
+            <div class="modal-footer" style="padding: 15px; text-align: center;">
+                <button class="btn btn-primary" onclick="closeModal('myGroupsModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 创建小组模态框 -->
+    <div id="createGroupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>创建小组</h2>
+                <button class="btn-close" onclick="closeModal('createGroupModal')">×</button>
+            </div>
+            <form id="groupForm" class="modal-body">
+                <div class="form-group">
+                    <label>小组名称 *</label>
+                    <input type="text" id="groupName" required maxlength="100" placeholder="请输入小组名称">
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="groupDescription" rows="3" placeholder="请输入小组描述"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal('createGroupModal')">取消</button>
+                    <button type="submit" class="btn btn-primary">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 小组成员管理模态框 -->
+    <div id="groupMemberManagerModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>管理小组成员 - <span id="memberManagerGroupName"></span></h2>
+                <button class="btn-close" onclick="closeModal('groupMemberManagerModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="memberManagerGroupId">
+                <div class="form-row">
+                    <select id="addMemberSelect" style="flex: 1;">
+                        <option value="">选择用户...</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="addGroupMember()">添加</button>
+                </div>
+            </div>
+            <div id="groupMemberList" class="groups-list">
+                <p class="text-muted">加载中...</p>
+            </div>
+            <div class="modal-footer" style="padding: 15px; text-align: center;">
+                <button class="btn btn-primary" onclick="closeModal('groupMemberManagerModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 所有小组管理模态框 -->
+    <div id="allGroupsModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>所有小组管理</h2>
+                <button class="btn-close" onclick="closeModal('allGroupsModal')">×</button>
+            </div>
+            <div id="allGroupsList" class="groups-list">
+                <p class="text-muted">加载中...</p>
+            </div>
+            <div class="modal-footer" style="padding: 15px; text-align: center;">
+                <button class="btn btn-primary" onclick="closeModal('allGroupsModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑小组模态框 -->
+    <div id="editGroupModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>编辑小组</h2>
+                <button class="btn-close" onclick="closeModal('editGroupModal')">×</button>
+            </div>
+            <form id="editGroupForm" class="modal-body" onsubmit="return false;">
+                <input type="hidden" id="editGroupId">
+                <div class="form-group">
+                    <label>小组名称 *</label>
+                    <input type="text" id="editGroupName" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea id="editGroupDescription" rows="3"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" onclick="closeModal('editGroupModal')">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveGroupEdit()">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 小组申请模态框 -->
+    <div id="groupRequestsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>小组创建申请</h2>
+                <button class="btn-close" onclick="closeModal('groupRequestsModal')">×</button>
+            </div>
+            <div id="groupRequestsList" class="group-requests-list">
+                <p class="text-muted">加载中...</p>
+            </div>
         </div>
     </div>
 

@@ -78,6 +78,10 @@ function isGroupAdmin(req, res, next) {
     next();
 }
 
+router.get('/ping', (req, res) => {
+    res.json({ ok: true, time: Date.now() });
+});
+
 router.post('/auth/register', async (req, res) => {
     const { email, password, role, invite_code } = req.body;
 

@@ -1,17 +1,12 @@
-// EdgeOne Pages Cloud Function entry point
-// This file handles all /api/* requests
-
-// Must be set BEFORE requiring api.js so data.js uses /tmp/data
+// EdgeOne Pages Cloud Function — ES module entry point
 process.env.EDGEONE_PAGES = '1';
 
-const express = require('express');
-const apiRouter = require('../../backend/api');
+import express from 'express';
+import apiRouter from '../../backend/api.js';
 
 const app = express();
 
 app.use(express.json());
-
-// Mount at both paths to handle EdgeOne routing variations
 app.use('/', apiRouter);
 app.use('/api', apiRouter);
 
@@ -22,4 +17,4 @@ app.use((err, req, res, next) => {
     }
 });
 
-module.exports = app;
+export default app;

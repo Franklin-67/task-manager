@@ -4,3 +4,4 @@ data/
 *.log
 .env
 .git
+.vercel

@@ -22,7 +22,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({ error: 'Something went wrong!' });
 });
 
-if (require.main === module) {
+if (!process.env.VERCEL) {
     app.listen(PORT, () => {
         console.log(`Task Manager Server running on http://localhost:${PORT}`);
     });

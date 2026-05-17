@@ -3,7 +3,9 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.VERCEL
+    ? path.join('/tmp', 'data')
+    : path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const INVITES_FILE = path.join(DATA_DIR, 'invites.json');

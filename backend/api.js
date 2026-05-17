@@ -115,11 +115,14 @@ router.post('/auth/register', async (req, res) => {
         return res.status(400).json({ error: '邀请码使用次数已满' });
     }
 
-    let userRole = 'member';
-    if (role && ['admin', 'superadmin'].includes(role)) {
+    // Default to the invite code's role, or 'member' if invite has no role restriction
+    let userRole = invite.role || 'member';
+    // If user explicitly selects a role, override (within allowed range)
+    if (role && ['admin', 'member'].includes(role)) {
         userRole = role;
     }
 
+    // If invite specifies a role, user must match it
     if (invite.role && userRole !== invite.role) {
         return res.status(400).json({ error: `此邀请码只能注册为${invite.role === 'admin' ? '管理员' : '普通成员'}` });
     }

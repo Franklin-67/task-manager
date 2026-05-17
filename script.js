@@ -138,6 +138,7 @@ async function register() {
     const inviteCode = document.getElementById('registerInviteCode').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value.trim();
+    const role = document.getElementById('registerRole').value;
 
     if (!inviteCode || !email || !password) {
         alert('请填写完整信息');
@@ -148,7 +149,7 @@ async function register() {
         const response = await fetch(`${API_BASE}/auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password, invite_code: inviteCode })
+            body: JSON.stringify({ email, password, invite_code: inviteCode, role: role || undefined })
         });
 
         const data = await response.json();

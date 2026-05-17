@@ -3,9 +3,11 @@ const path = require('path');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const DATA_DIR = process.env.VERCEL
+const IS_SERVERLESS = process.env.VERCEL || process.env.EDGEONE_PAGES;
+const DATA_DIR = IS_SERVERLESS
     ? path.join('/tmp', 'data')
     : path.join(__dirname, '..', 'data');
+const SEED_DIR = path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const TASKS_FILE = path.join(DATA_DIR, 'tasks.json');
 const INVITES_FILE = path.join(DATA_DIR, 'invites.json');
@@ -18,6 +20,16 @@ const SALT_ROUNDS = 10;
 function ensureDataDir() {
     if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (IS_SERVERLESS && !fs.existsSync(path.join(DATA_DIR, 'users.json'))) {
+        const files = ['users.json', 'tasks.json', 'invites.json', 'groups.json', 'user_groups.json', 'group_requests.json'];
+        files.forEach(file => {
+            const seedPath = path.join(SEED_DIR, file);
+            const destPath = path.join(DATA_DIR, file);
+            if (fs.existsSync(seedPath) && !fs.existsSync(destPath)) {
+                fs.copyFileSync(seedPath, destPath);
+            }
+        });
     }
 }
 

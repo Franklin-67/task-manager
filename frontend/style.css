@@ -11,6 +11,66 @@ body {
     padding: 20px;
 }
 
+/* 登录页面样式 */
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h1 {
+    font-size: 2rem;
+    color: #667eea;
+    margin-bottom: 10px;
+}
+
+.login-header p {
+    color: #6c757d;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+}
+
+.login-footer a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+.login-footer .hint {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 10px;
+}
+
 .container {
     max-width: 1400px;
     margin: 0 auto;
@@ -318,6 +378,19 @@ header h1 {
 .task-assignee-name {
     font-size: 0.9rem;
     color: #495057;
+}
+
+.task-group {
+    margin-bottom: 10px;
+}
+
+.task-group-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #6c757d;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
 }
 
 .task-actions {

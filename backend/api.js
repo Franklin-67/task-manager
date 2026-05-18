@@ -8,7 +8,11 @@ const {
     hashPassword, verifyPassword
 } = require('./data');
 
-require('./data').initializeData().catch(err => console.error('初始化失败:', err));
+try {
+    require('./data').initializeData().catch(err => console.error('初始化失败:', err));
+} catch (err) {
+    console.error('初始化异常:', err.message);
+}
 
 async function requireAuth(req, res, next) {
     try {

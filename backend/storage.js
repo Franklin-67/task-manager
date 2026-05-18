@@ -15,8 +15,12 @@ class FileStorageProvider {
     }
 
     _ensureDir() {
-        if (!fs.existsSync(this.dataDir)) {
-            fs.mkdirSync(this.dataDir, { recursive: true });
+        try {
+            if (!fs.existsSync(this.dataDir)) {
+                fs.mkdirSync(this.dataDir, { recursive: true });
+            }
+        } catch {
+            // /tmp may not be writable in some environments
         }
     }
 
@@ -37,8 +41,12 @@ class FileStorageProvider {
     }
 
     async setCollection(name, data) {
-        this._ensureDir();
-        fs.writeFileSync(this._filePath(name), JSON.stringify(data, null, 2), 'utf8');
+        try {
+            this._ensureDir();
+            fs.writeFileSync(this._filePath(name), JSON.stringify(data, null, 2), 'utf8');
+        } catch (err) {
+            console.error('FileStorageProvider.setCollection error:', err.message);
+        }
     }
 
     async initialize() {

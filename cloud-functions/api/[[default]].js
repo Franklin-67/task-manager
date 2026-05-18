@@ -1,11 +1,8 @@
 // EdgeOne Pages Cloud Function — ES module entry point
 process.env.EDGEONE_PAGES = '1';
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-
-const express = require('express');
-const apiRouter = require('../../backend/api.js');
+import express from 'express';
+import apiRouter from '../../backend/api.js';
 
 const app = express();
 

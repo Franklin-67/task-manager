@@ -8,40 +8,32 @@ const {
     hashPassword, verifyPassword
 } = require('./data');
 
-let users = [];
-let tasks = [];
+require('./data').initializeData().catch(err => console.error('初始化失败:', err));
 
-async function initialize() {
-    users = readUsers();
-    tasks = readTasks();
-    await require('./data').initializeData();
-    users = readUsers();
-    tasks = readTasks();
-}
-
-initialize().catch(err => console.error('初始化失败:', err));
-
-function requireAuth(req, res, next) {
-    users = readUsers();
-
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-        return res.status(401).json({ error: '未登录，请先登录' });
-    }
-
-    const token = authHeader.split(' ')[1];
+async function requireAuth(req, res, next) {
     try {
-        const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
-        const user = users.find(u => u.id === decoded.id);
+        const users = await readUsers();
 
-        if (!user) {
-            console.log('requireAuth 用户未找到:', { decodedId: decoded.id, userIds: users.map(u => u.id) });
-            return res.status(401).json({ error: '用户不存在' });
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ error: '未登录，请先登录' });
         }
-        req.user = user;
-        next();
+
+        const token = authHeader.split(' ')[1];
+        try {
+            const decoded = JSON.parse(Buffer.from(token, 'base64').toString('utf8'));
+            const user = users.find(u => u.id === decoded.id);
+
+            if (!user) {
+                return res.status(401).json({ error: '用户不存在' });
+            }
+            req.user = user;
+            next();
+        } catch (error) {
+            return res.status(401).json({ error: '登录已过期，请重新登录' });
+        }
     } catch (error) {
-        return res.status(401).json({ error: '登录已过期，请重新登录' });
+        next(error);
     }
 }
 
@@ -64,18 +56,23 @@ function requireAdmin(req, res, next) {
     next();
 }
 
-function isGroupAdmin(req, res, next) {
-    if (req.params.group_id) {
-        const userGroups = readUserGroups();
-        const group = readGroups().find(g => g.id == req.params.group_id);
-        if (group) {
-            const groupAdmins = userGroups.filter(ug => ug.group_id == group.id && ug.role === 'admin');
-            if (!groupAdmins.some(ga => ga.user_id === req.user.id)) {
-                return res.status(403).json({ error: '需要小组管理员权限' });
+async function isGroupAdmin(req, res, next) {
+    try {
+        if (req.params.group_id) {
+            const userGroups = await readUserGroups();
+            const groups = await readGroups();
+            const group = groups.find(g => g.id == req.params.group_id);
+            if (group) {
+                const groupAdmins = userGroups.filter(ug => ug.group_id == group.id && ug.role === 'admin');
+                if (!groupAdmins.some(ga => ga.user_id === req.user.id)) {
+                    return res.status(403).json({ error: '需要小组管理员权限' });
+                }
             }
         }
+        next();
+    } catch (error) {
+        next(error);
     }
-    next();
 }
 
 router.get('/ping', (req, res) => {
@@ -89,7 +86,7 @@ router.post('/auth/register', async (req, res) => {
         return res.status(400).json({ error: '请填写邮箱和密码' });
     }
 
-    users = readUsers();
+    const users = await readUsers();
     if (users.some(u => u.email === email)) {
         return res.status(409).json({ error: '邮箱已被注册' });
     }
@@ -98,7 +95,7 @@ router.post('/auth/register', async (req, res) => {
         return res.status(400).json({ error: '请提供邀请码' });
     }
 
-    const invites = readInvites();
+    const invites = await readInvites();
     const invite = invites.find(i => i.code === invite_code);
 
     if (!invite) {
@@ -115,14 +112,11 @@ router.post('/auth/register', async (req, res) => {
         return res.status(400).json({ error: '邀请码使用次数已满' });
     }
 
-    // Default to the invite code's role, or 'member' if invite has no role restriction
     let userRole = invite.role || 'member';
-    // If user explicitly selects a role, override (within allowed range)
     if (role && ['admin', 'member'].includes(role)) {
         userRole = role;
     }
 
-    // If invite specifies a role, user must match it
     if (invite.role && userRole !== invite.role) {
         return res.status(400).json({ error: `此邀请码只能注册为${invite.role === 'admin' ? '管理员' : '普通成员'}` });
     }
@@ -139,11 +133,10 @@ router.post('/auth/register', async (req, res) => {
         };
 
         users.push(newUser);
-        writeUsers(users);
-        users = readUsers();
+        await writeUsers(users);
 
         invite.uses += 1;
-        writeInvites(invites);
+        await writeInvites(invites);
 
         const { password: _, ...userWithoutPassword } = newUser;
         res.json({ message: '注册成功', user: userWithoutPassword });
@@ -160,7 +153,7 @@ router.post('/auth/login', async (req, res) => {
         return res.status(400).json({ error: '请填写完整信息' });
     }
 
-    users = readUsers();
+    const users = await readUsers();
     const user = users.find(u => u.email === email);
 
     if (!user) {
@@ -172,8 +165,6 @@ router.post('/auth/login', async (req, res) => {
         if (!isValid) {
             return res.status(401).json({ error: '邮箱或密码错误' });
         }
-
-        users = readUsers();
 
         const token = Buffer.from(JSON.stringify({ id: user.id, email: user.email })).toString('base64');
         const { password: _, ...userWithoutPassword } = user;
@@ -190,7 +181,7 @@ router.get('/auth/me', requireAuth, (req, res) => {
     res.json(userWithoutPassword);
 });
 
-router.post('/invites', requireAuth, requireSuperAdmin, (req, res) => {
+router.post('/invites', requireAuth, requireSuperAdmin, async (req, res) => {
     const { max_uses, expires_in_days, role } = req.body;
 
     let expiresAt = null;
@@ -205,19 +196,21 @@ router.post('/invites', requireAuth, requireSuperAdmin, (req, res) => {
     }
 
     const invite = generateInviteCode(null, max_uses || null, expiresAt, role || 'member');
-    writeInvites([...readInvites(), invite]);
+    const invites = await readInvites();
+    invites.push(invite);
+    await writeInvites(invites);
 
     res.json(invite);
 });
 
-router.get('/invites', requireAuth, requireSuperAdmin, (req, res) => {
-    const invites = readInvites();
+router.get('/invites', requireAuth, requireSuperAdmin, async (req, res) => {
+    const invites = await readInvites();
     res.json(invites);
 });
 
-router.delete('/invites/:code', requireAuth, requireSuperAdmin, (req, res) => {
+router.delete('/invites/:code', requireAuth, requireSuperAdmin, async (req, res) => {
     const code = req.params.code;
-    const invites = readInvites();
+    const invites = await readInvites();
     const initialLength = invites.length;
 
     const filtered = invites.filter(i => i.code !== code);
@@ -226,7 +219,7 @@ router.delete('/invites/:code', requireAuth, requireSuperAdmin, (req, res) => {
         return res.status(404).json({ error: '邀请码不存在' });
     }
 
-    writeInvites(filtered);
+    await writeInvites(filtered);
     res.json({ success: true });
 });
 
@@ -237,7 +230,7 @@ router.post('/users', requireAuth, requireSuperAdmin, async (req, res) => {
         return res.status(400).json({ error: '请填写完整信息' });
     }
 
-    users = readUsers();
+    const users = await readUsers();
     if (users.some(u => u.email === email)) {
         return res.status(409).json({ error: '邮箱已被使用' });
     }
@@ -253,7 +246,7 @@ router.post('/users', requireAuth, requireSuperAdmin, async (req, res) => {
         };
 
         users.push(newUser);
-        writeUsers(users);
+        await writeUsers(users);
 
         const { password: _, ...userWithoutPassword } = newUser;
         res.json(userWithoutPassword);
@@ -263,12 +256,12 @@ router.post('/users', requireAuth, requireSuperAdmin, async (req, res) => {
     }
 });
 
-router.get('/users', requireAuth, (req, res) => {
-    users = readUsers();
+router.get('/users', requireAuth, async (req, res) => {
+    const users = await readUsers();
     let visibleUsers = users;
 
     if (req.user.role !== 'superadmin') {
-        const userGroups = readUserGroups();
+        const userGroups = await readUserGroups();
         const myGroupIds = userGroups
             .filter(ug => ug.user_id === req.user.id)
             .map(ug => ug.group_id);
@@ -282,10 +275,11 @@ router.get('/users', requireAuth, (req, res) => {
         visibleUsers = users.filter(u => memberIds.has(u.id));
     }
 
+    const allUserGroups = await readUserGroups();
+    const groups = await readGroups();
     const usersWithoutPasswords = visibleUsers.map(u => {
         const { password: _, ...rest } = u;
-        const userGroups = readUserGroups().filter(ug => ug.user_id === u.id);
-        const groups = readGroups();
+        const userGroups = allUserGroups.filter(ug => ug.user_id === u.id);
         rest.groups = userGroups.map(ug => {
             const g = groups.find(gr => gr.id === ug.group_id);
             return g ? { id: g.id, name: g.name, role: ug.role } : null;
@@ -295,14 +289,14 @@ router.get('/users', requireAuth, (req, res) => {
     res.json(usersWithoutPasswords);
 });
 
-router.delete('/users/:id', requireAuth, requireSuperAdmin, (req, res) => {
+router.delete('/users/:id', requireAuth, requireSuperAdmin, async (req, res) => {
     const targetId = parseInt(req.params.id);
 
     if (targetId === req.user.id) {
         return res.status(400).json({ error: '不能删除自己' });
     }
 
-    users = readUsers();
+    let users = await readUsers();
     const initialLength = users.length;
     users = users.filter(u => u.id !== targetId);
 
@@ -310,24 +304,24 @@ router.delete('/users/:id', requireAuth, requireSuperAdmin, (req, res) => {
         return res.status(404).json({ error: '用户不存在' });
     }
 
-    writeUsers(users);
+    await writeUsers(users);
 
-    const userGroups = readUserGroups().filter(ug => ug.user_id !== targetId);
-    writeUserGroups(userGroups);
+    const userGroups = (await readUserGroups()).filter(ug => ug.user_id !== targetId);
+    await writeUserGroups(userGroups);
 
-    const groupRequests = readGroupRequests().filter(r => r.user_id !== targetId);
-    writeGroupRequests(groupRequests);
+    const groupRequests = (await readGroupRequests()).filter(r => r.user_id !== targetId);
+    await writeGroupRequests(groupRequests);
 
-    tasks = readTasks();
+    let tasks = await readTasks();
     tasks.forEach(t => {
         if (t.assignee_id == targetId) t.assignee_id = null;
     });
-    writeTasks(tasks);
+    await writeTasks(tasks);
 
     res.json({ success: true });
 });
 
-router.post('/groups', requireAuth, requireAdmin, (req, res) => {
+router.post('/groups', requireAuth, requireAdmin, async (req, res) => {
     const { name, description } = req.body;
 
     if (!name) {
@@ -338,8 +332,7 @@ router.post('/groups', requireAuth, requireAdmin, (req, res) => {
         return res.status(400).json({ error: '小组名称不能超过100个字符' });
     }
 
-    users = readUsers();
-    const groups = readGroups();
+    const groups = await readGroups();
     if (groups.some(g => g.name === name)) {
         return res.status(409).json({ error: '小组名称已存在' });
     }
@@ -353,26 +346,23 @@ router.post('/groups', requireAuth, requireAdmin, (req, res) => {
     };
 
     groups.push(newGroup);
-    writeGroups(groups);
+    await writeGroups(groups);
 
-    const userGroups = readUserGroups();
+    const userGroups = await readUserGroups();
     userGroups.push({
         user_id: req.user.id,
         group_id: newGroup.id,
         role: 'admin'
     });
-    writeUserGroups(userGroups);
-
-    users = readUsers();
-    tasks = readTasks();
+    await writeUserGroups(userGroups);
 
     res.json(newGroup);
 });
 
-router.get('/groups', requireAuth, requireSuperAdmin, (req, res) => {
-    const groups = readGroups();
-    const userGroups = readUserGroups();
-    users = readUsers();
+router.get('/groups', requireAuth, requireSuperAdmin, async (req, res) => {
+    const groups = await readGroups();
+    const userGroups = await readUserGroups();
+    const users = await readUsers();
 
     const groupsWithDetails = groups.map(group => {
         const groupMembers = userGroups.filter(ug => ug.group_id === group.id);
@@ -387,7 +377,7 @@ router.get('/groups', requireAuth, requireSuperAdmin, (req, res) => {
     res.json(groupsWithDetails);
 });
 
-router.put('/groups/:id', requireAuth, requireSuperAdmin, (req, res) => {
+router.put('/groups/:id', requireAuth, requireSuperAdmin, async (req, res) => {
     const groupId = parseInt(req.params.id);
     const { name, description } = req.body;
 
@@ -395,7 +385,7 @@ router.put('/groups/:id', requireAuth, requireSuperAdmin, (req, res) => {
         return res.status(400).json({ error: '请填写小组名称' });
     }
 
-    const groups = readGroups();
+    const groups = await readGroups();
     const groupIndex = groups.findIndex(g => g.id === groupId);
 
     if (groupIndex === -1) {
@@ -408,15 +398,15 @@ router.put('/groups/:id', requireAuth, requireSuperAdmin, (req, res) => {
 
     groups[groupIndex].name = name;
     groups[groupIndex].description = description || '';
-    writeGroups(groups);
+    await writeGroups(groups);
 
     res.json(groups[groupIndex]);
 });
 
-router.delete('/groups/:id', requireAuth, requireSuperAdmin, (req, res) => {
+router.delete('/groups/:id', requireAuth, requireSuperAdmin, async (req, res) => {
     const groupId = parseInt(req.params.id);
 
-    const groups = readGroups();
+    const groups = await readGroups();
     const initialLength = groups.length;
     const filtered = groups.filter(g => g.id !== groupId);
 
@@ -424,27 +414,27 @@ router.delete('/groups/:id', requireAuth, requireSuperAdmin, (req, res) => {
         return res.status(404).json({ error: '小组不存在' });
     }
 
-    writeGroups(filtered);
+    await writeGroups(filtered);
 
-    const userGroups = readUserGroups().filter(ug => ug.group_id !== groupId);
-    writeUserGroups(userGroups);
+    const userGroups = (await readUserGroups()).filter(ug => ug.group_id !== groupId);
+    await writeUserGroups(userGroups);
 
-    tasks = readTasks();
+    let tasks = await readTasks();
     tasks.forEach(t => {
         if (t.group_id == groupId) t.group_id = null;
     });
-    writeTasks(tasks);
+    await writeTasks(tasks);
 
     res.json({ success: true });
 });
 
-router.get('/groups-admin', requireAuth, (req, res) => {
+router.get('/groups-admin', requireAuth, async (req, res) => {
     if (!['admin', 'superadmin'].includes(req.user.role)) {
         return res.status(403).json({ error: '需要管理员权限' });
     }
 
-    const groups = readGroups();
-    const userGroups = readUserGroups();
+    const groups = await readGroups();
+    const userGroups = await readUserGroups();
 
     const groupsWithDetails = groups.map(group => {
         const userGroup = userGroups.find(ug => ug.group_id === group.id);
@@ -458,22 +448,21 @@ router.get('/groups-admin', requireAuth, (req, res) => {
     res.json(groupsWithDetails);
 });
 
-router.post('/groups/requests', requireAuth, requireAdmin, (req, res) => {
+router.post('/groups/requests', requireAuth, requireAdmin, async (req, res) => {
     const { group_id } = req.body;
 
     if (!group_id) {
         return res.status(400).json({ error: '请选择小组' });
     }
 
-    users = readUsers();
-    const groups = readGroups();
+    const groups = await readGroups();
     const group = groups.find(g => g.id == group_id);
 
     if (!group) {
         return res.status(404).json({ error: '小组不存在' });
     }
 
-    const groupRequests = readGroupRequests();
+    const groupRequests = await readGroupRequests();
     if (groupRequests.some(r => r.user_id === req.user.id && r.group_id === group.id)) {
         return res.status(400).json({ error: '申请已提交' });
     }
@@ -487,19 +476,19 @@ router.post('/groups/requests', requireAuth, requireAdmin, (req, res) => {
     };
 
     groupRequests.push(newRequest);
-    writeGroupRequests(groupRequests);
+    await writeGroupRequests(groupRequests);
 
     res.json({ message: '申请已提交' });
 });
 
-router.get('/groups/my-requests', requireAuth, requireAdmin, (req, res) => {
-    const groupRequests = readGroupRequests().filter(r => r.user_id === req.user.id);
+router.get('/groups/my-requests', requireAuth, requireAdmin, async (req, res) => {
+    const groupRequests = (await readGroupRequests()).filter(r => r.user_id === req.user.id);
     res.json(groupRequests);
 });
 
-router.put('/groups/requests/:id', requireAuth, requireSuperAdmin, (req, res) => {
+router.put('/groups/requests/:id', requireAuth, requireSuperAdmin, async (req, res) => {
     const { status } = req.body;
-    const groupRequests = readGroupRequests();
+    const groupRequests = await readGroupRequests();
 
     const reqIndex = groupRequests.findIndex(r => r.id == req.params.id);
     if (reqIndex === -1) {
@@ -514,26 +503,26 @@ router.put('/groups/requests/:id', requireAuth, requireSuperAdmin, (req, res) =>
     request.status = status;
 
     if (status === 'approved') {
-        const userGroups = readUserGroups();
+        const userGroups = await readUserGroups();
         if (!userGroups.some(ug => ug.user_id === request.user_id && ug.group_id === request.group_id)) {
             userGroups.push({
                 user_id: request.user_id,
                 group_id: request.group_id,
                 role: 'member'
             });
-            writeUserGroups(userGroups);
+            await writeUserGroups(userGroups);
         }
     }
 
     groupRequests[reqIndex] = request;
-    writeGroupRequests(groupRequests);
+    await writeGroupRequests(groupRequests);
 
     res.json({ message: status === 'approved' ? '批准成功' : '拒绝成功' });
 });
 
-router.get('/my-groups', requireAuth, (req, res) => {
-    const userGroups = readUserGroups().filter(ug => ug.user_id === req.user.id);
-    const groups = readGroups();
+router.get('/my-groups', requireAuth, async (req, res) => {
+    const userGroups = (await readUserGroups()).filter(ug => ug.user_id === req.user.id);
+    const groups = await readGroups();
 
     const groupsWithDetails = userGroups.map(ug => {
         const group = groups.find(g => g.id === ug.group_id);
@@ -547,24 +536,28 @@ router.get('/my-groups', requireAuth, (req, res) => {
     res.json(groupsWithDetails);
 });
 
-function requireGroupAdmin(req, res, next) {
-    const groupId = parseInt(req.params.groupId);
-    const userGroups = readUserGroups();
-    const isAdmin = userGroups.some(ug =>
-        ug.user_id === req.user.id && ug.group_id === groupId && ug.role === 'admin'
-    );
+async function requireGroupAdmin(req, res, next) {
+    try {
+        const groupId = parseInt(req.params.groupId);
+        const userGroups = await readUserGroups();
+        const isAdmin = userGroups.some(ug =>
+            ug.user_id === req.user.id && ug.group_id === groupId && ug.role === 'admin'
+        );
 
-    if (!isAdmin && req.user.role !== 'superadmin') {
-        return res.status(403).json({ error: '需要小组管理员权限' });
+        if (!isAdmin && req.user.role !== 'superadmin') {
+            return res.status(403).json({ error: '需要小组管理员权限' });
+        }
+        next();
+    } catch (error) {
+        next(error);
     }
-    next();
 }
 
-router.get('/groups/:groupId/members', requireAuth, requireGroupAdmin, (req, res) => {
+router.get('/groups/:groupId/members', requireAuth, requireGroupAdmin, async (req, res) => {
     const groupId = parseInt(req.params.groupId);
-    const userGroups = readUserGroups().filter(ug => ug.group_id === groupId);
-    users = readUsers();
-    const groups = readGroups();
+    const userGroups = (await readUserGroups()).filter(ug => ug.group_id === groupId);
+    const users = await readUsers();
+    const groups = await readGroups();
     const group = groups.find(g => g.id === groupId);
 
     const members = userGroups.map(ug => {
@@ -577,7 +570,7 @@ router.get('/groups/:groupId/members', requireAuth, requireGroupAdmin, (req, res
     res.json({ group: group || null, members });
 });
 
-router.post('/groups/:groupId/members', requireAuth, requireGroupAdmin, (req, res) => {
+router.post('/groups/:groupId/members', requireAuth, requireGroupAdmin, async (req, res) => {
     const groupId = parseInt(req.params.groupId);
     const { user_id } = req.body;
 
@@ -585,13 +578,13 @@ router.post('/groups/:groupId/members', requireAuth, requireGroupAdmin, (req, re
         return res.status(400).json({ error: '请选择要添加的成员' });
     }
 
-    users = readUsers();
+    const users = await readUsers();
     const user = users.find(u => u.id == user_id);
     if (!user) {
         return res.status(404).json({ error: '用户不存在' });
     }
 
-    const userGroups = readUserGroups();
+    const userGroups = await readUserGroups();
     if (userGroups.some(ug => ug.user_id == user_id && ug.group_id === groupId)) {
         return res.status(409).json({ error: '该用户已在小组中' });
     }
@@ -601,13 +594,13 @@ router.post('/groups/:groupId/members', requireAuth, requireGroupAdmin, (req, re
         group_id: groupId,
         role: 'member'
     });
-    writeUserGroups(userGroups);
+    await writeUserGroups(userGroups);
 
     const { password: _, ...userWithoutPassword } = user;
     res.json({ message: '添加成功', user: userWithoutPassword });
 });
 
-router.delete('/groups/:groupId/members/:userId', requireAuth, requireGroupAdmin, (req, res) => {
+router.delete('/groups/:groupId/members/:userId', requireAuth, requireGroupAdmin, async (req, res) => {
     const groupId = parseInt(req.params.groupId);
     const userId = parseInt(req.params.userId);
 
@@ -615,7 +608,7 @@ router.delete('/groups/:groupId/members/:userId', requireAuth, requireGroupAdmin
         return res.status(400).json({ error: '不能移除自己' });
     }
 
-    const userGroups = readUserGroups();
+    const userGroups = await readUserGroups();
     const initialLength = userGroups.length;
     const filtered = userGroups.filter(ug => !(ug.user_id === userId && ug.group_id === groupId));
 
@@ -623,12 +616,14 @@ router.delete('/groups/:groupId/members/:userId', requireAuth, requireGroupAdmin
         return res.status(404).json({ error: '该成员不在小组中' });
     }
 
-    writeUserGroups(filtered);
+    await writeUserGroups(filtered);
     res.json({ success: true });
 });
 
-router.get('/tasks', requireAuth, (req, res) => {
+router.get('/tasks', requireAuth, async (req, res) => {
     const { assignee_id, status, priority, group_id } = req.query;
+    const tasks = await readTasks();
+    const users = await readUsers();
 
     let filteredTasks = tasks;
 
@@ -656,7 +651,9 @@ router.get('/tasks', requireAuth, (req, res) => {
     res.json(tasksWithAssignee.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
 });
 
-router.get('/tasks/:id', requireAuth, (req, res) => {
+router.get('/tasks/:id', requireAuth, async (req, res) => {
+    const tasks = await readTasks();
+    const users = await readUsers();
     const task = tasks.find(t => t.id == req.params.id);
     if (!task) {
         return res.status(404).json({ error: '任务不存在' });
@@ -668,7 +665,7 @@ router.get('/tasks/:id', requireAuth, (req, res) => {
     });
 });
 
-router.post('/tasks', requireAuth, (req, res) => {
+router.post('/tasks', requireAuth, async (req, res) => {
     const { title, description, status, priority, tags, assignee_id, deadline, group_id } = req.body;
 
     if (!title) {
@@ -676,7 +673,7 @@ router.post('/tasks', requireAuth, (req, res) => {
     }
 
     if (group_id) {
-        const userGroups = readUserGroups();
+        const userGroups = await readUserGroups();
         const hasPermission = userGroups.some(ug =>
             ug.user_id === req.user.id && ug.group_id == group_id
         );
@@ -700,14 +697,16 @@ router.post('/tasks', requireAuth, (req, res) => {
         updated_at: new Date().toISOString()
     };
 
+    const tasks = await readTasks();
     tasks.push(newTask);
-    writeTasks(tasks);
+    await writeTasks(tasks);
     res.json(newTask);
 });
 
-router.put('/tasks/:id', requireAuth, (req, res) => {
+router.put('/tasks/:id', requireAuth, async (req, res) => {
     const { title, description, status, priority, tags, assignee_id, deadline, group_id } = req.body;
 
+    const tasks = await readTasks();
     const taskIndex = tasks.findIndex(t => t.id == req.params.id);
     if (taskIndex === -1) {
         return res.status(404).json({ error: '任务不存在' });
@@ -717,7 +716,7 @@ router.put('/tasks/:id', requireAuth, (req, res) => {
 
     const targetGroupId = group_id !== undefined ? group_id : task.group_id;
     if (targetGroupId) {
-        const userGroups = readUserGroups();
+        const userGroups = await readUserGroups();
         const hasPermission = userGroups.some(ug =>
             ug.user_id === req.user.id && ug.group_id == targetGroupId
         );
@@ -739,12 +738,12 @@ router.put('/tasks/:id', requireAuth, (req, res) => {
     task.updated_at = new Date().toISOString();
 
     tasks[taskIndex] = task;
-    writeTasks(tasks);
+    await writeTasks(tasks);
     res.json({ success: true });
 });
 
-router.delete('/tasks/:id', requireAuth, (req, res) => {
-    tasks = readTasks();
+router.delete('/tasks/:id', requireAuth, async (req, res) => {
+    let tasks = await readTasks();
     const initialLength = tasks.length;
     tasks = tasks.filter(t => t.id != req.params.id);
 
@@ -752,11 +751,13 @@ router.delete('/tasks/:id', requireAuth, (req, res) => {
         return res.status(404).json({ error: '任务不存在' });
     }
 
-    writeTasks(tasks);
+    await writeTasks(tasks);
     res.json({ success: true });
 });
 
-router.get('/stats', requireAuth, (req, res) => {
+router.get('/stats', requireAuth, async (req, res) => {
+    const users = await readUsers();
+    const tasks = await readTasks();
     res.json({
         total_users: users.length,
         total_tasks: tasks.length,

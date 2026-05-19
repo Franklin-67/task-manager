@@ -8,11 +8,10 @@ const {
     hashPassword, verifyPassword
 } = require('./data');
 
-try {
-    require('./data').initializeData().catch(err => console.error('初始化失败:', err));
-} catch (err) {
-    console.error('初始化异常:', err.message);
-}
+const initReady = require('./data').initializeData().catch(err => {
+    console.error('初始化失败:', err);
+    return false;
+});
 
 async function requireAuth(req, res, next) {
     try {
@@ -79,8 +78,25 @@ async function isGroupAdmin(req, res, next) {
     }
 }
 
-router.get('/ping', (req, res) => {
-    res.json({ ok: true, time: Date.now() });
+router.use(async (req, res, next) => {
+    try {
+        await initReady;
+        next();
+    } catch {
+        next();
+    }
+});
+
+router.get('/ping', async (req, res) => {
+    const users = await readUsers();
+    res.json({
+        ok: true,
+        time: Date.now(),
+        storage: process.env.EDGEONE_PAGES
+            ? (globalThis.TASK_KV ? 'kv' : 'file')
+            : 'file',
+        users: users.length
+    });
 });
 
 router.post('/auth/register', async (req, res) => {

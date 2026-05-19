@@ -83,10 +83,17 @@ async function isGroupAdmin(req, res, next) {
 
 router.get('/ping', async (req, res) => {
     const users = await readUsers();
+    let kvWorks = false;
+    if (process.env.EDGEONE_PAGES && globalThis.TASK_KV) {
+        try {
+            const test = await globalThis.TASK_KV.get('users', { type: 'json' });
+            kvWorks = test !== undefined;
+        } catch {}
+    }
     res.json({
         ok: true,
         time: Date.now(),
-        storage: (process.env.EDGEONE_PAGES && globalThis.TASK_KV) ? 'kv' : 'file',
+        storage: kvWorks ? 'kv' : 'file',
         users: users.length
     });
 });

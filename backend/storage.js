@@ -74,13 +74,6 @@ class FileStorageProvider {
 
 // ─── KV Storage Provider ─────────────────────────────────────────────
 
-function withTimeout(promise, ms, fallback) {
-    return Promise.race([
-        promise,
-        new Promise(resolve => setTimeout(() => resolve(fallback), ms))
-    ]);
-}
-
 class KVStorageProvider {
     constructor(kv) {
         this.kv = kv;
@@ -88,14 +81,8 @@ class KVStorageProvider {
 
     async getCollection(name) {
         try {
-            const raw = await withTimeout(this.kv.get(name), 5000, null);
-            if (!raw) return [];
-            if (Array.isArray(raw)) return raw;
-            if (typeof raw === 'string') {
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed : [];
-            }
-            return [];
+            const data = await this.kv.get(name, { type: 'json' });
+            return Array.isArray(data) ? data : [];
         } catch {
             return [];
         }
@@ -103,7 +90,7 @@ class KVStorageProvider {
 
     async setCollection(name, data) {
         try {
-            await withTimeout(this.kv.put(name, JSON.stringify(data)), 5000);
+            await this.kv.put(name, JSON.stringify(data));
         } catch {
             // silent fail
         }
@@ -157,20 +144,16 @@ let provider = null;
 function getStorageProvider() {
     if (provider) return provider;
 
-    // KV disabled until verified working — use file storage on EdgeOne (/tmp/data)
-    provider = new FileStorageProvider();
-    return provider;
-}
-
-function enableKV() {
     if (process.env.EDGEONE_PAGES) {
         const kv = globalThis.TASK_KV;
         if (kv && typeof kv.get === 'function') {
             provider = new KVStorageProvider(kv);
-            return true;
+            return provider;
         }
     }
-    return false;
+
+    provider = new FileStorageProvider();
+    return provider;
 }
 
 module.exports = { getStorageProvider, FileStorageProvider, KVStorageProvider };

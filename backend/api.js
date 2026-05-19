@@ -8,10 +8,13 @@ const {
     hashPassword, verifyPassword
 } = require('./data');
 
-const initReady = require('./data').initializeData().catch(err => {
-    console.error('初始化失败:', err);
-    return false;
-});
+const initPromise = require('./data').initializeData();
+const initTimeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('初始化超时')), 8000)
+);
+Promise.race([initPromise, initTimeout]).catch(err =>
+    console.error('初始化失败:', err.message)
+);
 
 async function requireAuth(req, res, next) {
     try {
@@ -78,25 +81,22 @@ async function isGroupAdmin(req, res, next) {
     }
 }
 
-router.use(async (req, res, next) => {
-    try {
-        await initReady;
-        next();
-    } catch {
-        next();
-    }
-});
-
 router.get('/ping', async (req, res) => {
-    const users = await readUsers();
-    res.json({
-        ok: true,
-        time: Date.now(),
-        storage: process.env.EDGEONE_PAGES
-            ? (globalThis.TASK_KV ? 'kv' : 'file')
-            : 'file',
-        users: users.length
-    });
+    let storage = 'file';
+    let usersCount = -1;
+    try {
+        if (process.env.EDGEONE_PAGES && globalThis.TASK_KV) {
+            storage = 'kv';
+            const d = await globalThis.TASK_KV.get('users');
+            usersCount = d ? (Array.isArray(d) ? d.length : JSON.parse(d).length) : 0;
+        } else {
+            const users = await readUsers();
+            usersCount = users.length;
+        }
+    } catch (e) {
+        usersCount = -1;
+    }
+    res.json({ ok: true, time: Date.now(), storage, users: usersCount });
 });
 
 router.post('/auth/register', async (req, res) => {

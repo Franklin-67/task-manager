@@ -74,6 +74,13 @@ class FileStorageProvider {
 
 // ─── KV Storage Provider ─────────────────────────────────────────────
 
+function withTimeout(promise, ms, fallback) {
+    return Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve(fallback), ms))
+    ]);
+}
+
 class KVStorageProvider {
     constructor(kv) {
         this.kv = kv;
@@ -81,7 +88,7 @@ class KVStorageProvider {
 
     async getCollection(name) {
         try {
-            const raw = await this.kv.get(name);
+            const raw = await withTimeout(this.kv.get(name), 5000, null);
             if (!raw) return [];
             if (Array.isArray(raw)) return raw;
             if (typeof raw === 'string') {
@@ -95,7 +102,11 @@ class KVStorageProvider {
     }
 
     async setCollection(name, data) {
-        await this.kv.put(name, JSON.stringify(data));
+        try {
+            await withTimeout(this.kv.put(name, JSON.stringify(data)), 5000);
+        } catch {
+            // silent fail
+        }
     }
 
     async initialize() {

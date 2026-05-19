@@ -81,8 +81,14 @@ class KVStorageProvider {
 
     async getCollection(name) {
         try {
-            const data = await this.kv.get(name, 'json');
-            return Array.isArray(data) ? data : [];
+            const raw = await this.kv.get(name);
+            if (!raw) return [];
+            if (Array.isArray(raw)) return raw;
+            if (typeof raw === 'string') {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            }
+            return [];
         } catch {
             return [];
         }

@@ -82,21 +82,13 @@ async function isGroupAdmin(req, res, next) {
 }
 
 router.get('/ping', async (req, res) => {
-    let storage = 'file';
-    let usersCount = -1;
-    try {
-        if (process.env.EDGEONE_PAGES && globalThis.TASK_KV) {
-            storage = 'kv';
-            const d = await globalThis.TASK_KV.get('users');
-            usersCount = d ? (Array.isArray(d) ? d.length : JSON.parse(d).length) : 0;
-        } else {
-            const users = await readUsers();
-            usersCount = users.length;
-        }
-    } catch (e) {
-        usersCount = -1;
-    }
-    res.json({ ok: true, time: Date.now(), storage, users: usersCount });
+    const users = await readUsers();
+    res.json({
+        ok: true,
+        time: Date.now(),
+        storage: (process.env.EDGEONE_PAGES && globalThis.TASK_KV) ? 'kv' : 'file',
+        users: users.length
+    });
 });
 
 router.post('/auth/register', async (req, res) => {

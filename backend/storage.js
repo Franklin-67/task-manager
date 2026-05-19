@@ -157,16 +157,20 @@ let provider = null;
 function getStorageProvider() {
     if (provider) return provider;
 
+    // KV disabled until verified working — use file storage on EdgeOne (/tmp/data)
+    provider = new FileStorageProvider();
+    return provider;
+}
+
+function enableKV() {
     if (process.env.EDGEONE_PAGES) {
         const kv = globalThis.TASK_KV;
         if (kv && typeof kv.get === 'function') {
             provider = new KVStorageProvider(kv);
-            return provider;
+            return true;
         }
     }
-
-    provider = new FileStorageProvider();
-    return provider;
+    return false;
 }
 
 module.exports = { getStorageProvider, FileStorageProvider, KVStorageProvider };

@@ -1,10 +1,4 @@
 {
-  "cloudFunctions": {
-    "nodejs": {
-      "includeFiles": ["data/**/*.json", "backend/**"],
-      "maxDuration": 60
-    }
-  },
   "kv": {
     "bindings": [
       {

@@ -4,5 +4,13 @@
       "includeFiles": ["data/**/*.json", "backend/**"],
       "maxDuration": 60
     }
+  },
+  "kv": {
+    "bindings": [
+      {
+        "name": "TASK_KV",
+        "type": "namespace"
+      }
+    ]
   }
 }

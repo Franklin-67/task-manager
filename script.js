@@ -309,7 +309,8 @@ async function renderTasks() {
         if (filterAssignee) params.append('assignee_id', filterAssignee);
         if (filterGroup) params.append('group_id', filterGroup);
 
-        const url = `${API_BASE}/tasks?${params.toString()}`;
+        const qs = params.toString();
+        const url = qs ? `${API_BASE}/tasks?${qs}` : `${API_BASE}/tasks`;
         const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -320,7 +321,18 @@ async function renderTasks() {
             return;
         }
 
-        tasks = await response.json();
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error || `服务器错误 (${response.status})`);
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data)) {
+            throw new Error('服务器返回了无效的任务数据格式');
+        }
+
+        tasks = data;
 
         const container = document.getElementById('tasksContainer');
         if (tasks.length === 0) {
@@ -329,7 +341,7 @@ async function renderTasks() {
         }
 
         container.innerHTML = tasks.map(task => {
-            const groupInfo = task.group_id ? userGroups.find(g => g.id === task.group_id) : null;
+            const groupInfo = task.group_id ? userGroups.find(g => g.id == task.group_id) : null;
 
             return `
             <div class="task-card status-${task.status} priority-${task.priority}" data-id="${task.id}">
@@ -363,7 +375,8 @@ async function renderTasks() {
 
     } catch (error) {
         console.error('加载任务失败:', error);
-        document.getElementById('tasksContainer').innerHTML = '<p class="text-muted">加载失败</p>';
+        document.getElementById('tasksContainer').innerHTML =
+            `<p class="text-muted">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
     }
 }
 

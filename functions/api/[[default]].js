@@ -554,21 +554,25 @@ async function handleGetTasks(request) {
     const auth = await authenticate(request);
     if (!auth) return errorResponse('未登录', 401);
 
-    const { assignee_id, status, priority, group_id } = getQueryParams(request);
+    try {
+        const { assignee_id, status, priority, group_id } = getQueryParams(request);
 
-    let tasks = await getCollection('tasks');
-    if (assignee_id) tasks = tasks.filter(t => t.assignee_id == assignee_id);
-    if (status) tasks = tasks.filter(t => t.status === status);
-    if (priority) tasks = tasks.filter(t => t.priority === priority);
-    if (group_id) tasks = tasks.filter(t => t.group_id && t.group_id == group_id);
+        let tasks = await getCollection('tasks');
+        if (assignee_id) tasks = tasks.filter(t => t.assignee_id == assignee_id);
+        if (status) tasks = tasks.filter(t => t.status === status);
+        if (priority) tasks = tasks.filter(t => t.priority === priority);
+        if (group_id) tasks = tasks.filter(t => t.group_id && t.group_id == group_id);
 
-    const users = await readUsers();
-    const result = tasks.map(task => {
-        const assignee = users.find(u => u.id == task.assignee_id);
-        return { ...task, assignee_name: assignee ? assignee.name : null };
-    });
-    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    return jsonResponse(result);
+        const users = await readUsers();
+        const result = tasks.map(task => {
+            const assignee = users.find(u => u.id == task.assignee_id);
+            return { ...task, assignee_name: assignee ? assignee.name : null };
+        });
+        result.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        return jsonResponse(result);
+    } catch (e) {
+        return jsonResponse([]);
+    }
 }
 
 async function handleGetTask(request, params) {
@@ -601,8 +605,10 @@ async function handleCreateTask(request) {
     const newTask = {
         id: Date.now(), title, description: description || '',
         status: status || 'todo', priority: priority || 'medium',
-        tags: tags || [], assignee_id: assignee_id || null,
-        deadline: deadline || null, group_id: group_id || null,
+        tags: tags || [],
+        assignee_id: assignee_id ? parseInt(assignee_id, 10) || null : null,
+        deadline: deadline || null,
+        group_id: group_id ? parseInt(group_id, 10) || null : null,
         created_at: new Date().toISOString(), updated_at: new Date().toISOString()
     };
 
@@ -631,7 +637,13 @@ async function handleUpdateTask(request, params) {
     }
 
     ['title', 'description', 'status', 'priority', 'tags', 'assignee_id', 'deadline', 'group_id'].forEach(field => {
-        if (body[field] !== undefined) task[field] = body[field];
+        if (body[field] !== undefined) {
+            if (field === 'assignee_id' || field === 'group_id') {
+                task[field] = body[field] ? parseInt(body[field], 10) || null : null;
+            } else {
+                task[field] = body[field];
+            }
+        }
     });
     task.updated_at = new Date().toISOString();
 

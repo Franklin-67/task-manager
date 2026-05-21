@@ -533,12 +533,18 @@ async function handleRemoveGroupMember(request, params) {
     return jsonResponse({ success: true });
 }
 
+function getQueryParams(request) {
+    const raw = request.url || '';
+    const qi = raw.indexOf('?');
+    if (qi === -1) return {};
+    return Object.fromEntries(new URLSearchParams(raw.slice(qi)));
+}
+
 async function handleGetTasks(request) {
     const auth = await authenticate(request);
     if (!auth) return errorResponse('未登录', 401);
 
-    const url = new URL(request.url);
-    const { assignee_id, status, priority, group_id } = Object.fromEntries(url.searchParams);
+    const { assignee_id, status, priority, group_id } = getQueryParams(request);
 
     let tasks = await getCollection('tasks');
     if (assignee_id) tasks = tasks.filter(t => t.assignee_id == assignee_id);
@@ -706,14 +712,16 @@ export async function onRequest({ request }) {
         });
     }
 
-    const url = new URL(request.url);
-    const pathname = url.pathname;
+    const rawUrl = request.url || '';
+    const pathname = rawUrl.indexOf('?') !== -1 ? rawUrl.slice(0, rawUrl.indexOf('?')) : rawUrl;
+    // Strip leading http://host if present
+    const cleanPath = pathname.includes('://') ? '/' + pathname.split('/').slice(3).join('/') : pathname;
 
     for (const route of ROUTES) {
         if (route.method !== request.method) continue;
 
         if (!route.params) {
-            if (route.path === pathname) {
+            if (route.path === cleanPath) {
                 return route.handler(request).catch(e => {
                     console.error('Route error:', e);
                     return errorResponse('服务器内部错误', 500);
@@ -722,7 +730,7 @@ export async function onRequest({ request }) {
         } else {
             // Path with params: /api/users/:id → match /api/users/123
             const pattern = route.path.replace(/:(\w+)/g, '(?<$1>[^/]+)');
-            const match = pathname.match(new RegExp('^' + pattern + '$'));
+            const match = cleanPath.match(new RegExp('^' + pattern + '$'));
             if (match) {
                 return route.handler(request, match.groups).catch(e => {
                     console.error('Route error:', e);

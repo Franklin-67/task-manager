@@ -238,6 +238,65 @@ header h1 {
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
+/* 视图切换开关 */
+.view-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 5px;
+}
+
+.view-label {
+    font-size: 0.85rem;
+    color: #495057;
+    user-select: none;
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ced4da;
+    transition: 0.3s;
+    border-radius: 24px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: #667eea;
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
 .tasks-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -397,6 +456,184 @@ header h1 {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
+}
+
+/* ─── 列表视图 ──────────────────────────────────────── */
+
+.tasks-container.list-view {
+    display: block;
+}
+
+.task-list-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.task-list-table th {
+    background: #f8f9fa;
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #dee2e6;
+    white-space: nowrap;
+}
+
+.task-list-table td {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    color: #495057;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+}
+
+.task-list-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.task-list-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.task-list-table .col-status {
+    width: 80px;
+}
+
+.task-list-table .col-priority {
+    width: 60px;
+}
+
+.task-list-table .col-deadline {
+    width: 110px;
+}
+
+.task-list-table .col-assignee {
+    width: 120px;
+}
+
+.task-list-table .col-actions {
+    width: 120px;
+    text-align: right;
+}
+
+.list-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.list-status-badge.status-todo {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.list-status-badge.status-in_progress {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.list-status-badge.status-done {
+    background: #d4edda;
+    color: #155724;
+}
+
+.list-priority-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.list-priority-dot.priority-high {
+    background: #dc3545;
+}
+
+.list-priority-dot.priority-medium {
+    background: #ffc107;
+}
+
+.list-priority-dot.priority-low {
+    background: #17a2b8;
+}
+
+.list-title-text {
+    font-weight: 600;
+    color: #212529;
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-title-text.done {
+    text-decoration: line-through;
+    color: #adb5bd;
+}
+
+.list-group-tag {
+    display: inline-block;
+    background: #e9ecef;
+    color: #6c757d;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.75rem;
+}
+
+.list-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.list-tag {
+    padding: 2px 6px;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    color: #868e96;
+}
+
+.list-assignee-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.list-assignee-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.list-actions {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-end;
+}
+
+.list-actions .btn {
+    padding: 4px 10px;
+    font-size: 0.75rem;
 }
 
 .btn {
@@ -814,6 +1051,28 @@ header h1 {
 
     .filter-group select {
         width: 100%;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .view-toggle {
+        padding: 0;
+    }
+
+    .task-list-table {
+        font-size: 0.8rem;
+    }
+
+    .task-list-table th,
+    .task-list-table td {
+        padding: 8px 10px;
+    }
+
+    .list-title-text {
+        max-width: 120px;
     }
 
     .modal-footer {

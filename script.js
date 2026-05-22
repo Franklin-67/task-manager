@@ -6,6 +6,7 @@ let users = [];
 let tasks = [];
 let userGroups = [];
 let allGroupsData = [];
+let viewMode = (localStorage.getItem('taskViewMode') || 'card');
 
 document.addEventListener('DOMContentLoaded', () => {
     checkLoginStatus();
@@ -19,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+function toggleViewMode() {
+    const toggle = document.getElementById('viewModeToggle');
+    viewMode = toggle.checked ? 'list' : 'card';
+    localStorage.setItem('taskViewMode', viewMode);
+    renderTasks();
+}
 
 function checkLoginStatus() {
     const savedToken = localStorage.getItem('authToken');
@@ -337,47 +345,130 @@ async function renderTasks() {
         const container = document.getElementById('tasksContainer');
         if (tasks.length === 0) {
             container.innerHTML = '<p class="text-muted">暂无任务</p>';
+            container.className = 'tasks-container';
             return;
         }
 
-        container.innerHTML = tasks.map(task => {
-            const groupInfo = task.group_id ? userGroups.find(g => g.id == task.group_id) : null;
+        // 恢复切换开关状态
+        const toggle = document.getElementById('viewModeToggle');
+        if (toggle) toggle.checked = (viewMode === 'list');
 
-            return `
-            <div class="task-card status-${task.status} priority-${task.priority}" data-id="${task.id}">
-                <div class="task-header">
-                    <h3 class="task-title">${escapeHtml(task.title)}</h3>
-                    <span class="task-priority priority-${task.priority}">${task.priority}</span>
-                </div>
-                ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
-                <div class="task-meta">
-                    ${task.tags ? task.tags.map(tag => `<span class="task-tag">#${escapeHtml(tag)}</span>`).join('') : ''}
-                </div>
-                ${groupInfo ? `<div class="task-group"><span class="task-group-tag">📁 ${escapeHtml(groupInfo.name)}</span></div>` : ''}
-                <div class="task-deadline ${isOverdue(task.deadline) ? 'overdue' : ''}">
-                    ${task.deadline ? `
-                        <span class="deadline-icon">📅</span>
-                        <span>${formatDate(task.deadline)}</span>
-                    ` : '<span>无截止日期</span>'}
-                </div>
-                ${task.assignee_id ? `
-                    <div class="task-assignee">
-                        <div class="task-assignee-avatar">${getInitials(task.assignee_name || '未知')}</div>
-                        <span class="task-assignee-name">${escapeHtml(task.assignee_name || '未知')}</span>
-                    </div>
-                ` : ''}
-                <div class="task-actions">
-                    <button class="btn btn-sm btn-secondary" onclick="editTask(${task.id})">编辑</button>
-                    <button class="btn btn-sm btn-secondary" onclick="deleteTask(${task.id})">删除</button>
-                </div>
-            </div>
-        `}).join('');
+        if (viewMode === 'list') {
+            renderTaskList(container, tasks);
+        } else {
+            renderTaskCards(container, tasks);
+        }
 
     } catch (error) {
         console.error('加载任务失败:', error);
         document.getElementById('tasksContainer').innerHTML =
             `<p class="text-muted">加载失败：${escapeHtml(error.message || '未知错误')}</p>`;
+        document.getElementById('tasksContainer').className = 'tasks-container';
     }
+}
+
+// 卡片视图渲染
+function renderTaskCards(container, taskList) {
+    container.className = 'tasks-container';
+    container.innerHTML = taskList.map(task => {
+        const groupInfo = task.group_id ? userGroups.find(g => g.id == task.group_id) : null;
+
+        return `
+        <div class="task-card status-${task.status} priority-${task.priority}" data-id="${task.id}">
+            <div class="task-header">
+                <h3 class="task-title">${escapeHtml(task.title)}</h3>
+                <span class="task-priority priority-${task.priority}">${task.priority}</span>
+            </div>
+            ${task.description ? `<p class="task-description">${escapeHtml(task.description)}</p>` : ''}
+            <div class="task-meta">
+                ${task.tags ? task.tags.map(tag => `<span class="task-tag">#${escapeHtml(tag)}</span>`).join('') : ''}
+            </div>
+            ${groupInfo ? `<div class="task-group"><span class="task-group-tag">📁 ${escapeHtml(groupInfo.name)}</span></div>` : ''}
+            <div class="task-deadline ${isOverdue(task.deadline) ? 'overdue' : ''}">
+                ${task.deadline ? `
+                    <span class="deadline-icon">📅</span>
+                    <span>${formatDate(task.deadline)}</span>
+                ` : '<span>无截止日期</span>'}
+            </div>
+            ${task.assignee_id ? `
+                <div class="task-assignee">
+                    <div class="task-assignee-avatar">${getInitials(task.assignee_name || '未知')}</div>
+                    <span class="task-assignee-name">${escapeHtml(task.assignee_name || '未知')}</span>
+                </div>
+            ` : ''}
+            <div class="task-actions">
+                <button class="btn btn-sm btn-secondary" onclick="editTask(${task.id})">编辑</button>
+                <button class="btn btn-sm btn-secondary" onclick="deleteTask(${task.id})">删除</button>
+            </div>
+        </div>
+    `}).join('');
+}
+
+// 列表视图渲染
+function renderTaskList(container, taskList) {
+    container.className = 'tasks-container list-view';
+
+    const statusLabel = { todo: '待办', in_progress: '进行中', done: '已完成' };
+    const priorityLabel = { high: '高', medium: '中', low: '低' };
+
+    const rows = taskList.map(task => {
+        const groupInfo = task.group_id ? userGroups.find(g => g.id == task.group_id) : null;
+        const overdue = isOverdue(task.deadline);
+
+        return `
+            <tr data-id="${task.id}">
+                <td class="col-status">
+                    <span class="list-status-badge status-${task.status}">${statusLabel[task.status] || task.status}</span>
+                </td>
+                <td class="col-title">
+                    <span class="list-title-text ${task.status === 'done' ? 'done' : ''}" title="${escapeHtml(task.title)}">${escapeHtml(task.title)}</span>
+                    ${groupInfo ? `<span class="list-group-tag">📁 ${escapeHtml(groupInfo.name)}</span>` : ''}
+                </td>
+                <td class="col-priority">
+                    <span class="list-priority-dot priority-${task.priority}"></span>${priorityLabel[task.priority] || task.priority}
+                </td>
+                <td class="col-tags">
+                    ${task.tags && task.tags.length ? `<div class="list-tags">${task.tags.map(tag => `<span class="list-tag">${escapeHtml(tag)}</span>`).join('')}</div>` : '<span class="text-muted">-</span>'}
+                </td>
+                <td class="col-deadline ${overdue ? 'overdue' : ''}">
+                    ${task.deadline ? `<span style="${overdue ? 'color:#dc3545;font-weight:600;' : ''}">${formatDate(task.deadline)}</span>` : '<span class="text-muted">-</span>'}
+                </td>
+                <td class="col-assignee">
+                    ${task.assignee_id ? `
+                        <div class="list-assignee-cell">
+                            <div class="list-assignee-avatar">${getInitials(task.assignee_name || '?')}</div>
+                            <span>${escapeHtml(task.assignee_name || '未知')}</span>
+                        </div>
+                    ` : '<span class="text-muted">未分配</span>'}
+                </td>
+                <td class="col-actions">
+                    <div class="list-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="editTask(${task.id})">编辑</button>
+                        <button class="btn btn-sm btn-secondary" onclick="deleteTask(${task.id})">删除</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    container.innerHTML = `
+        <table class="task-list-table">
+            <thead>
+                <tr>
+                    <th class="col-status">状态</th>
+                    <th>任务标题</th>
+                    <th class="col-priority">优先级</th>
+                    <th>标签</th>
+                    <th class="col-deadline">截止日期</th>
+                    <th class="col-assignee">负责人</th>
+                    <th class="col-actions">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
 }
 
 // 加载统计数据
